@@ -1,6 +1,4 @@
 import streamlit as st
-import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
 import numpy as np
 import pandas as pd
@@ -15,6 +13,15 @@ from datetime import datetime
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+
+try:
+    import tensorflow as tf
+    from tensorflow.keras.preprocessing.sequence import pad_sequences
+    TF_IMPORT_ERROR = None
+except Exception as exc:
+    tf = None
+    pad_sequences = None
+    TF_IMPORT_ERROR = exc
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 BASE_DIR  = Path(__file__).resolve().parent
@@ -504,6 +511,10 @@ def build_model():
 
 @st.cache_resource
 def load_assets():
+    if tf is None or pad_sequences is None:
+        raise RuntimeError(
+            f'TensorFlow is not available in this environment. Original import error: {TF_IMPORT_ERROR}'
+        )
     with open(MODELS_DIR / 'tokenizer.pickle', 'rb') as fh:
         tok = pickle.load(fh)
     model = build_model()
@@ -1200,7 +1211,10 @@ def main():
         model, tokenizer = load_assets()
     except Exception as e:
         st.error(f'Could not load model assets: {e}')
-        st.info('Ensure models/sentiment_weights.weights.h5 and models/tokenizer.pickle are present.')
+        st.info(
+            'Ensure models/sentiment_weights.weights.h5 and models/tokenizer.pickle are present, '
+            'and run on Python 3.11/3.12 with TensorFlow installed.'
+        )
         return
 
     tabs = st.tabs([
